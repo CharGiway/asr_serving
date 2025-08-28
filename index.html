@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>语音转文字服务</title>
+</head>
+<body>
+    <h1>语音转文字服务 (文件上传)</h1>
+    <button id="startButton">开始录音 (20秒)</button>
+    <p id="status">点击“开始录音”按钮</p>
+    <p>识别结果:</p>
+    <div id="transcription"></div>
+
+    <script>
+        const startButton = document.getElementById('startButton');
+        const statusDiv = document.getElementById('status');
+        const transcriptionDiv = document.getElementById('transcription');
+
+        let mediaRecorder;
+        let audioChunks = [];
+        const DURATION = 20 * 1000; // 20秒
+
+        startButton.onclick = async () => {
+            startButton.disabled = true;
+            statusDiv.textContent = '正在录音...';
+            transcriptionDiv.textContent = '';
+            audioChunks = [];
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    statusDiv.textContent = '录音已完成，正在转录...';
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+
+                    const formData = new FormData();
+                    formData.append('file', audioBlob, 'audio.webm');
+
+                    try {
+                        // 发送音频文件到后端
+                        const response = await fetch('http://127.0.0.1:8000/transcribe', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const data = await response.json();
+                        transcriptionDiv.textContent = data.transcription;
+                        statusDiv.textContent = '转录完成！';
+
+                    } catch (err) {
+                        console.error("转录失败:", err);
+                        statusDiv.textContent = '转录失败，请检查后端服务。';
+                    } finally {
+                        startButton.disabled = false;
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                };
+
+                mediaRecorder.start();
+
+                // 自动在20秒后停止录音
+                setTimeout(() => {
+                    if (mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                    }
+                }, DURATION);
+
+            } catch (err) {
+                console.error("无法获取麦克风权限:", err);
+                statusDiv.textContent = '无法获取麦克风权限。';
+                startButton.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>
