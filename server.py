@@ -25,7 +25,7 @@ print(f"检测到设备: {device.upper()}")
 print("正在加载 Whisper 模型，这可能需要一些时间...")
 try:
     # 使用用户脚本中的 "base" 模型，并指定加载设备
-    model = whisper.load_model("base", device=device)
+    model = whisper.load_model("large-v2", device=device)
     print("✅ 模型加载完成")
 except Exception as e:
     print(f"❌ 模型加载失败: {e}")
